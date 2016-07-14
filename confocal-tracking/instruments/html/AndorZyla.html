@@ -1,0 +1,810 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Andor Zyla Camera</title><meta name="generator" content="MATLAB 8.3"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2014-08-21"><meta name="DC.source" content="AndorZyla.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Andor Zyla Camera</h1><p>This provides a limited interface to Andor CMOS cameras.  It mostly wraps the downloadable SDK provided by Andor.  This should work for any camera that uses Andor's SDK3 (MATLAB interface).</p><pre class="codeinput"><span class="keyword">classdef</span> (ConstructOnLoad = true) AndorZyla &lt; hgsetget
+
+    <span class="keyword">properties</span>
+
+        <span class="comment">% Sets the number of images that should be summed to obtain each</span>
+        <span class="comment">% image in a sequence</span>
+        AccumulateCount;
+
+        <span class="comment">% Configures the height of the sensor area of interest in</span>
+        <span class="comment">% super-pixels</span>
+        AOIHeight;
+
+        <span class="comment">% Configures the width of the senor area of interest in</span>
+        <span class="comment">% super-pixels</span>
+        AOIWidth;
+
+        <span class="comment">% Configures the left hand coordinate of the sensor area of</span>
+        <span class="comment">% interest in sensor pixels</span>
+        AOILeft;
+
+        <span class="comment">% Configures the top coordinate of the sensor coordinate in pixels</span>
+        AOITop;
+
+        <span class="comment">% Sets up the pixel binning on the camera.  Options:</span>
+        <span class="comment">%   '1x1'</span>
+        <span class="comment">%   '2x2'</span>
+        <span class="comment">%   '4x4'</span>
+        <span class="comment">%   '8x8'</span>
+        AOIBinning;
+
+        <span class="comment">% Configures whether the camera will acquire a fixed length</span>
+        <span class="comment">% sequence or a continuous sequence.  In 'Fixed' mode the camera</span>
+        <span class="comment">% will acquire 'FrameCount' number of images and then stop</span>
+        <span class="comment">% automatically.  In 'Continuous' mode the camera will continue to</span>
+        <span class="comment">% acquire images indefinitely until the 'AcquisitionStop' command</span>
+        <span class="comment">% is issued.  Options:</span>
+        <span class="comment">%   'Fixed'</span>
+        <span class="comment">%   'Continuous'</span>
+        CycleMode;
+
+        <span class="comment">% Configures which on-sensor electronic shuttering mode is used.</span>
+        <span class="comment">% For pulsed or fast moving images, 'Global' shuttering is</span>
+        <span class="comment">% recommended.  For the highest frame rates and best noise</span>
+        <span class="comment">% performance, 'Rolling' is recommended.</span>
+        <span class="comment">% Options:</span>
+        <span class="comment">%   'Rolling'</span>
+        <span class="comment">%   'Global'</span>
+        ElectronicShutteringMode;
+
+        <span class="comment">% The requested exposure time in seconds.  Note: In some modes the</span>
+        <span class="comment">% exposure time can also be modified while the acquisition is still</span>
+        <span class="comment">% running.</span>
+        ExposureTime;
+
+        <span class="comment">% Configures the speed of the fan in the camera.</span>
+        <span class="comment">% Options:</span>
+        <span class="comment">%   'Off'</span>
+        <span class="comment">%   'On'</span>
+        FanSpeed;
+
+        <span class="comment">% Configures the number of images to acquire in the sequence.</span>
+        <span class="comment">% When this feature is unavailable then the camera does not</span>
+        <span class="comment">% currently support fixed length series, therefore you must</span>
+        <span class="comment">% explicitly abort the acquisition once you have acquired the</span>
+        <span class="comment">% amount of frames required.</span>
+        FrameCount;
+
+        <span class="comment">% Configures the frame rate in Hz at which each image is</span>
+        <span class="comment">% acquired during any acquisition sequence. This is the rate at</span>
+        <span class="comment">% which frames are acquired by the camera which may be</span>
+        <span class="comment">% different from the rate at which frames are delivered to the</span>
+        <span class="comment">% user. For example when AccumulateCount has a value other</span>
+        <span class="comment">% than 1, the apparent frame rate will decrease proportionally.</span>
+        FrameRate;
+
+        <span class="comment">% Configures the format of data stream.</span>
+        <span class="comment">% Neo, Zyla and SimCam Options:</span>
+        <span class="comment">%   'Mono12'</span>
+        <span class="comment">%   'Mono12Packed'</span>
+        <span class="comment">%   'Mono16'</span>
+        <span class="comment">%   'Mono32'</span>
+        PixelEncoding;
+
+        <span class="comment">% Configures the state of the sensor cooling. Cooling is</span>
+        <span class="comment">% disabled by default at power up and must be enabled for the</span>
+        <span class="comment">% camera to achieve its target temperature. The actual target</span>
+        <span class="comment">% temperature can be set with the TemperatureControl feature</span>
+        <span class="comment">% where available for example on the Neo camera.</span>
+        SensorCooling;
+
+        <span class="comment">% Allows the user to configure the camera trigger mode at a</span>
+        <span class="comment">% high level. If the trigger mode is set to Advanced then the</span>
+        <span class="comment">% Trigger Selector and Trigger Source feature must also be</span>
+        <span class="comment">% set.</span>
+        <span class="comment">% Neo, Zyla and SimCam Options:</span>
+        <span class="comment">%   'Internal'</span>
+        <span class="comment">%   'Software'</span>
+        <span class="comment">% 	'External'</span>
+        <span class="comment">% 	'External Start'</span>
+        <span class="comment">%   'External Exposure'</span>
+        TriggerMode;
+
+        <span class="comment">% Vertically centres the AOI in the frame. With this enabled,</span>
+        <span class="comment">% AOITop will be disabled.</span>
+        VerticallyCenterAOI;
+    <span class="keyword">end</span>
+
+    <span class="keyword">properties</span> (SetAccess = private)
+
+        <span class="comment">% Returns whether or not an acquisition is currently acquiring.</span>
+        CameraAcquiring;
+
+        <span class="comment">% Returns the camera model.</span>
+        CameraModel;
+
+        <span class="comment">% Returns the height of each pixel in micrometers.</span>
+        PixelHeight;
+
+        <span class="comment">% Returns the width of each pixel in micrometers.</span>
+        PixelWidth;
+
+        <span class="comment">% Returns the height of the sensor in pixels.</span>
+        SensorHeight;
+
+        <span class="comment">% Returns the width of the sensor in pixels.</span>
+        SensorWidth;
+
+        <span class="comment">% Read the current temperature of the sensor.</span>
+        SensorTemperature;
+
+        <span class="comment">% Reports the current value of the camera&#8217;s internal timestamp</span>
+        <span class="comment">% clock. This same clock is used to timestamp images as they</span>
+        <span class="comment">% are acquired when the MetadataTimestamp feature is</span>
+        <span class="comment">% enabled. The clock is reset to zero when the camera is</span>
+        <span class="comment">% powered on and then runs continuously at the frequency</span>
+        <span class="comment">% indicated by the TimestampClockFrequency feature. The</span>
+        <span class="comment">% clock is 64-bits wide.</span>
+        TimestampClock;
+
+        <span class="comment">% Reports the frequency of the camera&#8217;s internal timestamp</span>
+        <span class="comment">% clock in Hz</span>
+        TimestampClockFrequency;
+
+        <span class="comment">% The handle object provided by Andor's SDK</span>
+        Hndl;
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span>
+</pre><pre class="codeinput">        <span class="keyword">function</span> obj = AndorZyla(varargin)
+        <span class="comment">% AndorZyla(0) returns a new camera handle object using the primary</span>
+        <span class="comment">% camera.</span>
+
+            <span class="keyword">if</span> nargin &gt; 0
+                <span class="keyword">if</span> strcmp(varargin{1},<span class="string">'null'</span>)
+                    <span class="keyword">return</span>;
+                <span class="keyword">else</span>
+                    camera_number = varargin{1};
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                camera_number = 0;
+            <span class="keyword">end</span>
+
+            disp(<span class="string">'Opening SDK'</span>);
+            [rc] = AT_InitialiseLibrary();
+            AT_CheckError(rc);
+
+            disp(<span class="string">'Initializing Camera'</span>);
+            [rc, hndl] = AT_Open(camera_number);
+            AT_CheckError(rc);
+            obj.Hndl = hndl;
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% destructor</span>
+        <span class="keyword">function</span> delete(obj)
+
+            <span class="comment">% Turn off cooling.</span>
+            obj.SensorCooling = 0;
+
+            <span class="comment">% Close camera</span>
+            [rc] = AT_Close(obj.Hndl);
+            AT_CheckWarning(rc);
+
+            <span class="comment">% Unload SDK</span>
+            [rc] = AT_FinaliseLibrary();
+            AT_CheckWarning(rc);
+
+            disp(<span class="string">'Camera shutdown complete.'</span>);
+        <span class="keyword">end</span>
+</pre><pre class="codeoutput">Opening SDK
+Initializing Camera
+Camera shutdown complete.
+
+ans = 
+
+  AndorZyla with properties:
+
+            CameraAcquiring: []
+                CameraModel: []
+                PixelHeight: []
+                 PixelWidth: []
+               SensorHeight: []
+                SensorWidth: []
+          SensorTemperature: []
+             TimestampClock: []
+    TimestampClockFrequency: []
+                       Hndl: 131
+
+</pre><p>All the setters and getters for property values.</p><pre class="codeinput">        <span class="keyword">function</span> obj = set.AccumulateCount(obj, val)
+            obj.setIntegerProperty(<span class="string">'AccumulateCount'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AccumulateCount(obj)
+            val = obj.getIntegerProperty(<span class="string">'AccumulateCount'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AOIHeight(obj, val)
+            obj.setIntegerProperty(<span class="string">'AOIHeight'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AOIHeight(obj)
+            val = obj.getIntegerProperty(<span class="string">'AOIHeight'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AOIWidth(obj, val)
+            obj.setIntegerProperty(<span class="string">'AOIWidth'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AOIWidth(obj)
+            val = obj.getIntegerProperty(<span class="string">'AOIWidth'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AOILeft(obj, val)
+            obj.setIntegerProperty(<span class="string">'AOILeft'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AOILeft(obj)
+            val = obj.getIntegerProperty(<span class="string">'AOILeft'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AOITop(obj, val)
+            obj.setIntegerProperty(<span class="string">'AOITop'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AOITop(obj)
+            val = obj.getIntegerProperty(<span class="string">'AOITop'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AOIBinning(obj, val)
+            obj.setEnumProperty(<span class="string">'AOIBinning'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.AOIBinning(obj)
+            val = obj.getEnumProperty(<span class="string">'AOIBinning'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.CycleMode(obj, val)
+            obj.setEnumProperty(<span class="string">'CycleMode'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.CycleMode(obj)
+            val = obj.getEnumProperty(<span class="string">'CycleMode'</span>);
+        <span class="keyword">end</span>
+
+       <span class="keyword">function</span> obj = set.ElectronicShutteringMode(obj, val)
+            obj.setEnumProperty(<span class="string">'ElectronicShutteringMode'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.ElectronicShutteringMode(obj)
+            val = obj.getEnumProperty(<span class="string">'ElectronicShutteringMode'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.ExposureTime(obj, val)
+            obj.setFloatProperty(<span class="string">'ExposureTime'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.ExposureTime(obj)
+            val = obj.getFloatProperty(<span class="string">'ExposureTime'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.FanSpeed(obj, val)
+            obj.setEnumProperty(<span class="string">'FanSpeed'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.FanSpeed(obj)
+            val = obj.getEnumProperty(<span class="string">'FanSpeed'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.FrameCount(obj, val)
+            obj.setIntegerProperty(<span class="string">'FrameCount'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.FrameCount(obj)
+            val = obj.getIntegerProperty(<span class="string">'FrameCount'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.FrameRate(obj, val)
+            obj.setFloatProperty(<span class="string">'FrameRate'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.FrameRate(obj)
+            val = obj.getFloatProperty(<span class="string">'FrameRate'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.PixelEncoding(obj, val)
+            obj.setEnumProperty(<span class="string">'PixelEncoding'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.PixelEncoding(obj)
+            val = obj.getEnumProperty(<span class="string">'PixelEncoding'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.SensorCooling(obj, val)
+            obj.setBoolProperty(<span class="string">'SensorCooling'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.SensorCooling(obj)
+            val = obj.getBoolProperty(<span class="string">'SensorCooling'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.TriggerMode(obj, val)
+            obj.setEnumProperty(<span class="string">'TriggerMode'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.TriggerMode(obj)
+            val = obj.getEnumProperty(<span class="string">'TriggerMode'</span>);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.VerticallyCenterAOI(obj, val)
+            obj.setBoolProperty(<span class="string">'VerticallyCenterAOI'</span>, val);
+        <span class="keyword">end</span>
+        <span class="keyword">function</span> val = get.VerticallyCenterAOI(obj)
+            val = obj.getBoolProperty(<span class="string">'VerticallyCenterAOI'</span>);
+        <span class="keyword">end</span>
+</pre><p>Easier interface to use every get/set property in the SDK.</p><pre class="codeinput">        <span class="comment">% Integer properties</span>
+        <span class="keyword">function</span> obj = setIntegerProperty(obj, feature_string, val)
+            [rc] = AT_SetInt(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> new_val = getIntegerProperty(obj, feature_string)
+            [rc, new_val] = AT_GetInt(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="comment">% Float properties</span>
+        <span class="keyword">function</span> obj = setFloatProperty(obj, feature_string, val)
+            [rc] = AT_SetFloat(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> [new_val, obj] = getFloatProperty(obj, feature_string)
+            [rc, new_val] = AT_GetFloat(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="comment">% Boolean properties</span>
+        <span class="keyword">function</span> obj = setBoolProperty(obj, feature_string, val)
+            [rc] = AT_SetBool(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> [new_val, obj] = getBoolProperty(obj, feature_string)
+            [rc, new_val] = AT_GetBool(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="comment">% Enumerated properties</span>
+        <span class="keyword">function</span> obj = setEnumProperty(obj, feature_string, val)
+            [rc] = AT_SetEnumString(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> [new_val, obj] = getEnumProperty(obj, feature_string)
+            [rc, idx] = AT_GetEnumIndex(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+
+            [rc, new_val] = AT_GetEnumStringByIndex( <span class="keyword">...</span>
+                                obj.Hndl, <span class="keyword">...</span>
+                                feature_string, <span class="keyword">...</span>
+                                idx, <span class="keyword">...</span>
+                                256); <span class="comment">% (last arg: max string length)</span>
+            AT_CheckError(rc);
+        <span class="keyword">end</span>
+</pre><pre class="codeinput">    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Andor Zyla Camera
+%
+% This provides a limited interface to Andor CMOS cameras.  It mostly
+% wraps the downloadable SDK provided by Andor.  This should work for
+% any camera that uses Andor's SDK3 (MATLAB interface).
+
+classdef (ConstructOnLoad = true) AndorZyla < hgsetget
+    
+    properties 
+        
+        % Sets the number of images that should be summed to obtain each
+        % image in a sequence
+        AccumulateCount;
+        
+        % Configures the height of the sensor area of interest in
+        % super-pixels
+        AOIHeight;
+        
+        % Configures the width of the senor area of interest in
+        % super-pixels
+        AOIWidth;
+        
+        % Configures the left hand coordinate of the sensor area of
+        % interest in sensor pixels
+        AOILeft;
+        
+        % Configures the top coordinate of the sensor coordinate in pixels
+        AOITop;
+        
+        % Sets up the pixel binning on the camera.  Options:
+        %   '1x1'
+        %   '2x2'
+        %   '4x4'
+        %   '8x8'
+        AOIBinning;
+        
+        % Configures whether the camera will acquire a fixed length
+        % sequence or a continuous sequence.  In 'Fixed' mode the camera 
+        % will acquire 'FrameCount' number of images and then stop
+        % automatically.  In 'Continuous' mode the camera will continue to
+        % acquire images indefinitely until the 'AcquisitionStop' command
+        % is issued.  Options:
+        %   'Fixed'
+        %   'Continuous'
+        CycleMode;
+        
+        % Configures which on-sensor electronic shuttering mode is used.
+        % For pulsed or fast moving images, 'Global' shuttering is
+        % recommended.  For the highest frame rates and best noise
+        % performance, 'Rolling' is recommended.
+        % Options:
+        %   'Rolling'
+        %   'Global'
+        ElectronicShutteringMode;
+        
+        % The requested exposure time in seconds.  Note: In some modes the
+        % exposure time can also be modified while the acquisition is still
+        % running.
+        ExposureTime;
+        
+        % Configures the speed of the fan in the camera.
+        % Options:
+        %   'Off'
+        %   'On'
+        FanSpeed;
+        
+        % Configures the number of images to acquire in the sequence. 
+        % When this feature is unavailable then the camera does not 
+        % currently support fixed length series, therefore you must 
+        % explicitly abort the acquisition once you have acquired the 
+        % amount of frames required.
+        FrameCount;
+        
+        % Configures the frame rate in Hz at which each image is 
+        % acquired during any acquisition sequence. This is the rate at 
+        % which frames are acquired by the camera which may be 
+        % different from the rate at which frames are delivered to the 
+        % user. For example when AccumulateCount has a value other 
+        % than 1, the apparent frame rate will decrease proportionally.
+        FrameRate;
+        
+        % Configures the format of data stream. 
+        % Neo, Zyla and SimCam Options: 
+        %   'Mono12'
+        %   'Mono12Packed'
+        %   'Mono16'
+        %   'Mono32'
+        PixelEncoding;
+        
+        % Configures the state of the sensor cooling. Cooling is 
+        % disabled by default at power up and must be enabled for the 
+        % camera to achieve its target temperature. The actual target 
+        % temperature can be set with the TemperatureControl feature 
+        % where available for example on the Neo camera.
+        SensorCooling;
+        
+        % Allows the user to configure the camera trigger mode at a 
+        % high level. If the trigger mode is set to Advanced then the 
+        % Trigger Selector and Trigger Source feature must also be 
+        % set. 
+        % Neo, Zyla and SimCam Options: 
+        %   'Internal'
+        %   'Software'
+        % 	'External'
+        % 	'External Start'
+        %   'External Exposure'
+        TriggerMode;
+        
+        % Vertically centres the AOI in the frame. With this enabled, 
+        % AOITop will be disabled.
+        VerticallyCenterAOI;
+    end
+    
+    properties (SetAccess = private)
+        
+        % Returns whether or not an acquisition is currently acquiring. 
+        CameraAcquiring;
+        
+        % Returns the camera model.
+        CameraModel;
+        
+        % Returns the height of each pixel in micrometers.
+        PixelHeight;
+        
+        % Returns the width of each pixel in micrometers.
+        PixelWidth;
+        
+        % Returns the height of the sensor in pixels. 
+        SensorHeight;
+        
+        % Returns the width of the sensor in pixels. 
+        SensorWidth;
+        
+        % Read the current temperature of the sensor. 
+        SensorTemperature;
+        
+        % Reports the current value of the camera’s internal timestamp 
+        % clock. This same clock is used to timestamp images as they 
+        % are acquired when the MetadataTimestamp feature is 
+        % enabled. The clock is reset to zero when the camera is 
+        % powered on and then runs continuously at the frequency 
+        % indicated by the TimestampClockFrequency feature. The 
+        % clock is 64-bits wide.
+        TimestampClock;
+        
+        % Reports the frequency of the camera’s internal timestamp 
+        % clock in Hz
+        TimestampClockFrequency;
+        
+        % The handle object provided by Andor's SDK
+        Hndl;
+    end
+    
+    methods
+        function obj = AndorZyla(varargin)
+        % AndorZyla(0) returns a new camera handle object using the primary
+        % camera.
+            
+            if nargin > 0
+                if strcmp(varargin{1},'null')
+                    return;
+                else
+                    camera_number = varargin{1};
+                end
+            else
+                camera_number = 0;
+            end
+            
+            disp('Opening SDK');
+            [rc] = AT_InitialiseLibrary();
+            AT_CheckError(rc);
+            
+            disp('Initializing Camera');
+            [rc, hndl] = AT_Open(camera_number);
+            AT_CheckError(rc);
+            obj.Hndl = hndl;
+            
+        end
+  
+        % destructor
+        function delete(obj)
+            
+            % Turn off cooling.
+            obj.SensorCooling = 0;
+            
+            % Close camera
+            [rc] = AT_Close(obj.Hndl);
+            AT_CheckWarning(rc);
+            
+            % Unload SDK
+            [rc] = AT_FinaliseLibrary();
+            AT_CheckWarning(rc);
+            
+            disp('Camera shutdown complete.');
+        end
+        
+        %% 
+        % All the setters and getters for property values.
+        %
+
+        function obj = set.AccumulateCount(obj, val)
+            obj.setIntegerProperty('AccumulateCount', val);
+        end
+        function val = get.AccumulateCount(obj)
+            val = obj.getIntegerProperty('AccumulateCount');
+        end
+        
+        function obj = set.AOIHeight(obj, val)
+            obj.setIntegerProperty('AOIHeight', val);
+        end
+        function val = get.AOIHeight(obj)
+            val = obj.getIntegerProperty('AOIHeight');
+        end
+        
+        function obj = set.AOIWidth(obj, val)
+            obj.setIntegerProperty('AOIWidth', val);
+        end
+        function val = get.AOIWidth(obj)
+            val = obj.getIntegerProperty('AOIWidth');
+        end
+
+        function obj = set.AOILeft(obj, val)
+            obj.setIntegerProperty('AOILeft', val);
+        end
+        function val = get.AOILeft(obj)
+            val = obj.getIntegerProperty('AOILeft');
+        end
+
+        function obj = set.AOITop(obj, val)
+            obj.setIntegerProperty('AOITop', val);
+        end
+        function val = get.AOITop(obj)
+            val = obj.getIntegerProperty('AOITop');
+        end
+        
+        function obj = set.AOIBinning(obj, val)
+            obj.setEnumProperty('AOIBinning', val);
+        end
+        function val = get.AOIBinning(obj)
+            val = obj.getEnumProperty('AOIBinning');
+        end
+        
+        function obj = set.CycleMode(obj, val)
+            obj.setEnumProperty('CycleMode', val);
+        end
+        function val = get.CycleMode(obj)
+            val = obj.getEnumProperty('CycleMode');
+        end
+        
+       function obj = set.ElectronicShutteringMode(obj, val)
+            obj.setEnumProperty('ElectronicShutteringMode', val);
+        end
+        function val = get.ElectronicShutteringMode(obj)
+            val = obj.getEnumProperty('ElectronicShutteringMode');
+        end
+        
+        function obj = set.ExposureTime(obj, val)
+            obj.setFloatProperty('ExposureTime', val);
+        end
+        function val = get.ExposureTime(obj)
+            val = obj.getFloatProperty('ExposureTime');
+        end
+        
+        function obj = set.FanSpeed(obj, val)
+            obj.setEnumProperty('FanSpeed', val);
+        end
+        function val = get.FanSpeed(obj)
+            val = obj.getEnumProperty('FanSpeed');
+        end
+        
+        function obj = set.FrameCount(obj, val)
+            obj.setIntegerProperty('FrameCount', val);
+        end
+        function val = get.FrameCount(obj)
+            val = obj.getIntegerProperty('FrameCount');
+        end
+        
+        function obj = set.FrameRate(obj, val)
+            obj.setFloatProperty('FrameRate', val);
+        end
+        function val = get.FrameRate(obj)
+            val = obj.getFloatProperty('FrameRate');
+        end
+        
+        function obj = set.PixelEncoding(obj, val)
+            obj.setEnumProperty('PixelEncoding', val);
+        end
+        function val = get.PixelEncoding(obj)
+            val = obj.getEnumProperty('PixelEncoding');
+        end
+        
+        function obj = set.SensorCooling(obj, val)
+            obj.setBoolProperty('SensorCooling', val);
+        end
+        function val = get.SensorCooling(obj)
+            val = obj.getBoolProperty('SensorCooling');
+        end
+        
+        function obj = set.TriggerMode(obj, val)
+            obj.setEnumProperty('TriggerMode', val);
+        end
+        function val = get.TriggerMode(obj)
+            val = obj.getEnumProperty('TriggerMode');
+        end
+        
+        function obj = set.VerticallyCenterAOI(obj, val)
+            obj.setBoolProperty('VerticallyCenterAOI', val);
+        end
+        function val = get.VerticallyCenterAOI(obj)
+            val = obj.getBoolProperty('VerticallyCenterAOI');
+        end
+        
+        %%
+        % Easier interface to use every get/set property in the SDK.
+
+        % Integer properties
+        function obj = setIntegerProperty(obj, feature_string, val)
+            [rc] = AT_SetInt(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        end
+        
+        function new_val = getIntegerProperty(obj, feature_string)
+            [rc, new_val] = AT_GetInt(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        end
+        
+        % Float properties
+        function obj = setFloatProperty(obj, feature_string, val)
+            [rc] = AT_SetFloat(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        end
+        
+        function [new_val, obj] = getFloatProperty(obj, feature_string)
+            [rc, new_val] = AT_GetFloat(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        end
+        
+        % Boolean properties
+        function obj = setBoolProperty(obj, feature_string, val)
+            [rc] = AT_SetBool(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        end
+        
+        function [new_val, obj] = getBoolProperty(obj, feature_string)
+            [rc, new_val] = AT_GetBool(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+        end
+        
+        % Enumerated properties
+        function obj = setEnumProperty(obj, feature_string, val)
+            [rc] = AT_SetEnumString(obj.Hndl, feature_string, val);
+            AT_CheckError(rc);
+        end
+        
+        function [new_val, obj] = getEnumProperty(obj, feature_string)
+            [rc, idx] = AT_GetEnumIndex(obj.Hndl, feature_string);
+            AT_CheckError(rc);
+            
+            [rc, new_val] = AT_GetEnumStringByIndex( ...
+                                obj.Hndl, ...
+                                feature_string, ...
+                                idx, ...
+                                256); % (last arg: max string length)
+            AT_CheckError(rc);
+        end
+    end
+end
+##### SOURCE END #####
+--></body></html>

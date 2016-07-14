@@ -1,0 +1,7 @@
+function ref_out = find_reference_points(ref_in, vol, varargin)
+% ref_out = find_reference_points(ref_in, vol)
+%
+%   Takes an array of reference points and attempts to match them with high
+%   intensity regions in vol.
+
+

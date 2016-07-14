@@ -1,0 +1,782 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>This handles analysis and visualization of whole-brain imaging data</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2015-06-17"><meta name="DC.source" content="DataAnalyzer.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>This handles analysis and visualization of whole-brain imaging data</h1><pre class="codeinput"><span class="keyword">classdef</span> DataAnalyzer
+
+    <span class="keyword">properties</span>
+
+        <span class="comment">% Table of data, set on construction</span>
+        RawData
+
+        <span class="comment">% This specifies an order for the neurons. It is generally set</span>
+        <span class="comment">% when the cluster method is called.</span>
+        NeuronOrder = [];
+
+        <span class="comment">% This specifies a linkage from clustering. It is generally set</span>
+        <span class="comment">% when the cluster method is called.</span>
+        LinkageData = [];
+
+        <span class="comment">% Neuron whitelist and blacklist</span>
+        NeuronWhitelist = [];
+        NeuronBlacklist = []; <span class="comment">%categorical([75 81 84:90 92:95 97:99]);</span>
+
+        <span class="comment">% Time index whitelist and blacklist</span>
+        TimeWhitelist = []; <span class="comment">%1200:3460;</span>
+        TimeBlacklist = [];
+
+        <span class="comment">% Filter applied prior to subtracting red from green. Numerator</span>
+        <span class="comment">% only. 1 -&gt; no filtering.</span>
+        LoadLowpassFilter = 1;
+
+        <span class="comment">% Filter used for input normalization (DF/F)... this is actually a</span>
+        <span class="comment">% *lowpass* filter whose output gets subtracted. If the output of</span>
+        <span class="comment">% this filter is F0 and the input is F, the loaded data will be</span>
+        <span class="comment">% (F-F0)/F0.</span>
+        LoadHighpassFilter = @(x) causal_smooth_ignore_nans(x, 1000);
+
+        <span class="comment">% Filter applied to final signal (after subtraction). Numerator</span>
+        <span class="comment">% only. 1 -&gt; no filtering</span>
+        OutputFilter = 1;
+
+        <span class="comment">% Method for calculating pairwise distances between signals. see</span>
+        <span class="comment">% PDIST</span>
+        DistanceMetric = <span class="string">'correlation'</span>;
+
+        <span class="comment">% Method for calculating linkage for clustering. see LINKAGE</span>
+        LinkageMethod = <span class="string">'complete'</span>;
+
+        <span class="comment">% Method for grouping leaves in dendrogram. see OPTIMALLEAFORDER.</span>
+        LeafGroupMethod = <span class="string">'adjacent'</span>; <span class="comment">% 'adjacent' or 'group'</span>
+
+        <span class="comment">% Show v_x in the background of single-neuron plots</span>
+        ShowVelocity = false;
+
+        <span class="comment">% Show the temperature in the background of single-neuron plots</span>
+        ShowTemperature = false;
+
+        <span class="comment">% Show omega in the background of single-neuron plots</span>
+        ShowOmega = false;
+
+    <span class="keyword">end</span>
+
+    <span class="keyword">properties</span> (SetAccess=protected)
+
+        <span class="comment">% A list of neuron IDs according to the current ordering. Set this</span>
+        <span class="comment">% by calling the cluster method.</span>
+        NeuronNames
+
+    <span class="keyword">end</span>
+
+    <span class="keyword">properties</span> (Dependent)
+
+        <span class="comment">% The time trace of temperature</span>
+        Temperature
+
+        <span class="comment">% The time trace of velocity (v_x)</span>
+        Velocity
+
+        <span class="comment">% The time trace of head angular velocity (omega)</span>
+        Omega
+
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span>
+
+        <span class="keyword">function</span> obj = DataAnalyzer(tabulated_data)
+            obj.RawData = tabulated_data;
+
+            all_neurons = categories(obj.RawData{:,<span class="string">'Neuron'</span>});
+            names = merge_black_white(all_neurons, <span class="keyword">...</span>
+                obj.NeuronBlacklist, <span class="keyword">...</span>
+                obj.NeuronWhitelist);
+
+            obj.NeuronNames = names;
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> sig = signal(obj, neuron)
+            <span class="comment">% sig = SIGNAL(obj, neuron)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Returns a time series corresponding to the calcium signal</span>
+            <span class="comment">%   from the specified neuron.</span>
+
+            <span class="keyword">if</span> isnumeric(neuron)
+                neuron = categorical(neuron);
+            <span class="keyword">end</span>
+
+            row_rfp = obj.RawData.Neuron == neuron &amp; <span class="keyword">...</span>
+                obj.RawData.Channel == <span class="string">'rfp'</span>;
+            row_gcamp = obj.RawData.Neuron == neuron &amp; <span class="keyword">...</span>
+                obj.RawData.Channel == <span class="string">'gcamp'</span>;
+
+            rfp_raw = obj.RawData{row_rfp, <span class="string">'TimeSeries'</span>};
+            gcamp_raw = obj.RawData{row_gcamp, <span class="string">'TimeSeries'</span>};
+
+            rfp_cropped = obj.crop_timeseries(rfp_raw);
+            gcamp_cropped = obj.crop_timeseries(gcamp_raw);
+
+            <span class="comment">% Pull out the data now... it should be evenly sampled for both</span>
+            <span class="comment">% channels.</span>
+            r = rfp_cropped.Data;
+            g = gcamp_cropped.Data;
+
+            <span class="comment">% Get rid of the NaNs for filtering</span>
+            r = interpolate_nans(r, <span class="string">'linear'</span>);
+            g = interpolate_nans(g, <span class="string">'linear'</span>);
+
+            <span class="comment">% Highpass filter and normalize the inputs</span>
+            r0 = obj.LoadHighpassFilter(r);
+            g0 = obj.LoadHighpassFilter(g);
+
+            r = (r-r0)./r0;
+            g = (g-g0)./g0;
+
+            <span class="comment">% Now lowpass them</span>
+            r = filter(obj.LoadLowpassFilter, 1, r);
+            g = filter(obj.LoadLowpassFilter, 1, g);
+
+            <span class="comment">% Generate a signal from red and green time series.</span>
+            sig = obj.signal_from_channels(g, r);
+
+            sig = filter(obj.OutputFilter, 1, sig);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> [sigs, names] = all_signals(obj)
+            <span class="comment">% [sigs, names] = obj.all_signals()</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Returns all the signals for valid neurons in a</span>
+            <span class="comment">%   length(neurons) x length(times) array. 'names' is an array</span>
+
+            names = obj.NeuronNames;
+
+            <span class="keyword">for</span> i = 1:length(names)
+
+                sigs(i,:) = obj.signal(names(i));
+
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> D = pdist(obj)
+            <span class="comment">% D = PDIST(obj)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Calculates the pairwise distances between signals,</span>
+            <span class="comment">%   outputing a vector (see PDIST). The order is specified by</span>
+            <span class="comment">%   obj.NeuronOrder.</span>
+
+            [sigs, ~] = obj.all_signals();
+            metric = obj.DistanceMetric;
+
+            D = pdist(sigs, metric);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = cluster(obj)
+            <span class="comment">% obj = CLUSTER(obj, metric)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Clusters the signals from all neurons and returns the</span>
+            <span class="comment">%   linkages. This sets the following fields:</span>
+            <span class="comment">%</span>
+            <span class="comment">%       NeuronNames</span>
+            <span class="comment">%       LinkageData</span>
+            <span class="comment">%</span>
+            <span class="comment">% See also LINKAGE.</span>
+
+            <span class="comment">% First calculate the pairwise distances</span>
+            D = obj.pdist();
+
+            links = linkage(D, obj.LinkageMethod);
+            neuron_order = optimalleaforder(links, D, <span class="keyword">...</span>
+                <span class="string">'CRITERIA'</span>, obj.LeafGroupMethod);
+
+            <span class="comment">% Cretae a new order for the names.</span>
+            obj.NeuronNames = obj.NeuronNames(neuron_order);
+            obj.LinkageData = struct(<span class="keyword">...</span>
+                <span class="string">'linkage'</span>, links, <span class="keyword">...</span>
+                <span class="string">'order'</span>, neuron_order);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = show_clusters(obj)
+            <span class="comment">% obj = SHOW_CLUSTERS(obj)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Visualize the clusters.</span>
+
+            <span class="keyword">if</span> isempty(obj.LinkageData)
+                obj = obj.cluster();
+            <span class="keyword">end</span>
+
+            links = obj.LinkageData.linkage;
+            order = obj.LinkageData.order;
+            names = obj.NeuronNames;
+
+            D = obj.pdist();
+            sigs = obj.all_signals();
+
+            figure(1);
+
+            subplot(<span class="string">'Position'</span>, [0, 0, .15, 1]);
+            dendrogram(links, 0, <span class="keyword">...</span>
+                <span class="string">'Reorder'</span>, order, <span class="keyword">...</span>
+                <span class="string">'Orientation'</span>, <span class="string">'left'</span>, <span class="keyword">...</span>
+                <span class="string">'Labels'</span>, char(names));
+            <span class="comment">%set(gca, 'visible', 'off');</span>
+
+            subplot(<span class="string">'Position'</span>, [0.16, 0, 0.41, 1]);
+            pcolor(sigs);
+            colormap <span class="string">jet</span>;
+            shading <span class="string">flat</span>;
+            set(gca, <span class="string">'visible'</span>, <span class="string">'off'</span>);
+            c_min = quantile(row(sigs), 0.001);
+            c_max = quantile(row(sigs), 0.999);
+            caxis([c_min, c_max]);
+
+            subplot(<span class="string">'Position'</span>, [0.58, 0, 0.41, 1]);
+            D_square = squareform(D);
+            pcolor(1-D_square);
+            <span class="comment">%colormap jet;</span>
+            shading <span class="string">flat</span>;
+            set(gca, <span class="string">'visible'</span>, <span class="string">'off'</span>);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> [coeff, score, latent] = show_components(obj, comps)
+            <span class="comment">% obj = SHOW_COMPONENTS(obj, components)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Shows the principal components.</span>
+
+            [coeff, score, latent] = pca(obj.all_signals(), <span class="keyword">...</span>
+                <span class="string">'centered'</span>, false);
+
+            figure(2);
+
+            N = length(comps);
+            min_y = min_all(coeff(:,comps));
+            max_y = max_all(coeff(:,comps));
+
+            <span class="keyword">for</span> i = 1:N
+                subplot(N, 1, i);
+                plot(coeff(:,comps(i)));
+                ylim([min_y, max_y]);
+                title(sprintf(<span class="string">'Variance explained: %d '</span>, latent(i)));
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> v = get.Velocity(obj)
+
+            ts = obj.RawData{<span class="string">'velocity_x'</span>,<span class="string">'TimeSeries'</span>};
+            ts = obj.crop_timeseries(ts);
+
+            v = obj.filter_timeseries(ts);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> omega = get.Omega(obj)
+
+            ts = obj.RawData{<span class="string">'omega_y'</span>,<span class="string">'TimeSeries'</span>};
+            ts = obj.crop_timeseries(ts);
+
+            omega = obj.filter_timeseries(ts);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> temperature = get.Temperature(obj)
+
+            ts = obj.RawData{<span class="string">'T'</span>,<span class="string">'TimeSeries'</span>};
+            ts = obj.crop_timeseries(ts);
+
+            temperature = ts.Data;
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> ts = crop_timeseries(obj, ts)
+            <span class="comment">% ts = CROP_TIMESERIES(obj, ts)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Takes a timeseries and removes times according the the time</span>
+            <span class="comment">%   index whitelists and blacklists.</span>
+
+            all_times = 1:ts.Length;
+
+            time_indices = merge_black_white(all_times, <span class="keyword">...</span>
+                obj.TimeBlacklist, obj.TimeWhitelist);
+
+            bad_times = setdiff(all_times, time_indices);
+
+            ts = delsample(ts, <span class="string">'Index'</span>, bad_times);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> y = filter_timeseries(obj, ts)
+            <span class="comment">% y = FILTER_TIMESERIES(obj, ts)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Takes a timeseries and applies the object's output filter</span>
+            <span class="comment">%   to generate a vector that can be used for ploting.</span>
+
+            x = interp_nans(ts.Data, <span class="string">'linear'</span>);
+            y = filter(obj.OutputFilter, 1, x);
+
+        <span class="keyword">end</span>
+
+
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span> (Static)
+
+        <span class="keyword">function</span> obj = from_data_file(animal)
+            <span class="comment">% obj = DataAnalyzer.FROM_DATA_FILE(animal)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Returns an analysis object by loading the most recent data</span>
+            <span class="comment">%   for a given animal.</span>
+
+            tabulated_data = get_recent_data(animal);
+            obj = DataAnalyzer(tabulated_data);
+
+        <span class="keyword">end</span>
+
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span> (Static, Access=protected)
+
+        <span class="keyword">function</span> signal = signal_from_channels(green, red)
+            <span class="comment">% signal = DataAnalyzer.signal_from_channels(green, red)</span>
+            <span class="comment">%</span>
+            <span class="comment">%   Returns a vector of data obtained by subtracting the red</span>
+            <span class="comment">%   signal from the green via linear regression.</span>
+
+            a = polyfit(red, green, 1);
+
+            signal = green - (a(1)*red + a(2));
+            signal = green;
+
+        <span class="keyword">end</span>
+
+    <span class="keyword">end</span>
+
+<span class="keyword">end</span>
+</pre><pre class="codeoutput error">Error using DataAnalyzer (line 85)
+Not enough input arguments.
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% This handles analysis and visualization of whole-brain imaging data
+
+classdef DataAnalyzer
+
+    properties
+
+        % Table of data, set on construction
+        RawData
+
+        % This specifies an order for the neurons. It is generally set
+        % when the cluster method is called.
+        NeuronOrder = [];
+
+        % This specifies a linkage from clustering. It is generally set
+        % when the cluster method is called.
+        LinkageData = [];
+
+        % Neuron whitelist and blacklist
+        NeuronWhitelist = [];
+        NeuronBlacklist = []; %categorical([75 81 84:90 92:95 97:99]);
+
+        % Time index whitelist and blacklist
+        TimeWhitelist = []; %1200:3460;
+        TimeBlacklist = [];
+
+        % Filter applied prior to subtracting red from green. Numerator
+        % only. 1 -> no filtering.
+        LoadLowpassFilter = 1;
+
+        % Filter used for input normalization (DF/F)... this is actually a
+        % *lowpass* filter whose output gets subtracted. If the output of 
+        % this filter is F0 and the input is F, the loaded data will be
+        % (F-F0)/F0.
+        LoadHighpassFilter = @(x) causal_smooth_ignore_nans(x, 1000);
+
+        % Filter applied to final signal (after subtraction). Numerator
+        % only. 1 -> no filtering
+        OutputFilter = 1;
+
+        % Method for calculating pairwise distances between signals. see
+        % PDIST
+        DistanceMetric = 'correlation';
+
+        % Method for calculating linkage for clustering. see LINKAGE
+        LinkageMethod = 'complete';
+
+        % Method for grouping leaves in dendrogram. see OPTIMALLEAFORDER.
+        LeafGroupMethod = 'adjacent'; % 'adjacent' or 'group'
+
+        % Show v_x in the background of single-neuron plots
+        ShowVelocity = false;
+
+        % Show the temperature in the background of single-neuron plots
+        ShowTemperature = false;
+
+        % Show omega in the background of single-neuron plots
+        ShowOmega = false;
+
+    end
+
+    properties (SetAccess=protected)
+
+        % A list of neuron IDs according to the current ordering. Set this
+        % by calling the cluster method.
+        NeuronNames
+
+    end
+
+    properties (Dependent)
+
+        % The time trace of temperature
+        Temperature
+
+        % The time trace of velocity (v_x)
+        Velocity
+
+        % The time trace of head angular velocity (omega)
+        Omega
+
+    end
+
+    methods
+
+        function obj = DataAnalyzer(tabulated_data)
+            obj.RawData = tabulated_data;
+
+            all_neurons = categories(obj.RawData{:,'Neuron'});
+            names = merge_black_white(all_neurons, ...
+                obj.NeuronBlacklist, ...
+                obj.NeuronWhitelist);
+
+            obj.NeuronNames = names;
+        end
+
+        function sig = signal(obj, neuron)
+            % sig = SIGNAL(obj, neuron)
+            %
+            %   Returns a time series corresponding to the calcium signal
+            %   from the specified neuron.
+
+            if isnumeric(neuron)
+                neuron = categorical(neuron);
+            end
+
+            row_rfp = obj.RawData.Neuron == neuron & ...
+                obj.RawData.Channel == 'rfp';
+            row_gcamp = obj.RawData.Neuron == neuron & ...
+                obj.RawData.Channel == 'gcamp';
+
+            rfp_raw = obj.RawData{row_rfp, 'TimeSeries'};
+            gcamp_raw = obj.RawData{row_gcamp, 'TimeSeries'};
+
+            rfp_cropped = obj.crop_timeseries(rfp_raw);
+            gcamp_cropped = obj.crop_timeseries(gcamp_raw);
+
+            % Pull out the data now... it should be evenly sampled for both
+            % channels.
+            r = rfp_cropped.Data;
+            g = gcamp_cropped.Data;
+
+            % Get rid of the NaNs for filtering
+            r = interpolate_nans(r, 'linear');
+            g = interpolate_nans(g, 'linear');
+
+            % Highpass filter and normalize the inputs
+            r0 = obj.LoadHighpassFilter(r);
+            g0 = obj.LoadHighpassFilter(g);
+
+            r = (r-r0)./r0;
+            g = (g-g0)./g0;
+
+            % Now lowpass them
+            r = filter(obj.LoadLowpassFilter, 1, r);
+            g = filter(obj.LoadLowpassFilter, 1, g);
+
+            % Generate a signal from red and green time series.
+            sig = obj.signal_from_channels(g, r);
+
+            sig = filter(obj.OutputFilter, 1, sig);
+
+        end
+
+        function [sigs, names] = all_signals(obj)
+            % [sigs, names] = obj.all_signals()
+            %
+            %   Returns all the signals for valid neurons in a
+            %   length(neurons) x length(times) array. 'names' is an array
+
+            names = obj.NeuronNames;
+
+            for i = 1:length(names)
+
+                sigs(i,:) = obj.signal(names(i));
+
+            end
+
+        end
+
+        function D = pdist(obj)
+            % D = PDIST(obj)
+            %
+            %   Calculates the pairwise distances between signals,
+            %   outputing a vector (see PDIST). The order is specified by
+            %   obj.NeuronOrder.
+
+            [sigs, ~] = obj.all_signals();
+            metric = obj.DistanceMetric;
+
+            D = pdist(sigs, metric);
+
+        end
+
+        function obj = cluster(obj)
+            % obj = CLUSTER(obj, metric)
+            %
+            %   Clusters the signals from all neurons and returns the
+            %   linkages. This sets the following fields:
+            %
+            %       NeuronNames
+            %       LinkageData
+            %
+            % See also LINKAGE.
+
+            % First calculate the pairwise distances
+            D = obj.pdist();
+
+            links = linkage(D, obj.LinkageMethod);
+            neuron_order = optimalleaforder(links, D, ...
+                'CRITERIA', obj.LeafGroupMethod);
+
+            % Cretae a new order for the names.
+            obj.NeuronNames = obj.NeuronNames(neuron_order);
+            obj.LinkageData = struct(...
+                'linkage', links, ...
+                'order', neuron_order);
+
+        end
+
+        function obj = show_clusters(obj)
+            % obj = SHOW_CLUSTERS(obj)
+            %
+            %   Visualize the clusters.
+
+            if isempty(obj.LinkageData)
+                obj = obj.cluster();
+            end
+
+            links = obj.LinkageData.linkage;
+            order = obj.LinkageData.order;
+            names = obj.NeuronNames;
+
+            D = obj.pdist();
+            sigs = obj.all_signals();
+
+            figure(1); 
+
+            subplot('Position', [0, 0, .15, 1]);
+            dendrogram(links, 0, ...
+                'Reorder', order, ...
+                'Orientation', 'left', ...
+                'Labels', char(names));
+            %set(gca, 'visible', 'off');
+
+            subplot('Position', [0.16, 0, 0.41, 1]);
+            pcolor(sigs);
+            colormap jet;
+            shading flat;
+            set(gca, 'visible', 'off');
+            c_min = quantile(row(sigs), 0.001);
+            c_max = quantile(row(sigs), 0.999);
+            caxis([c_min, c_max]);
+
+            subplot('Position', [0.58, 0, 0.41, 1]);
+            D_square = squareform(D);
+            pcolor(1-D_square);
+            %colormap jet;
+            shading flat;
+            set(gca, 'visible', 'off');
+
+        end
+
+        function [coeff, score, latent] = show_components(obj, comps)
+            % obj = SHOW_COMPONENTS(obj, components)
+            %
+            %   Shows the principal components.
+
+            [coeff, score, latent] = pca(obj.all_signals(), ...
+                'centered', false);
+
+            figure(2);
+
+            N = length(comps);
+            min_y = min_all(coeff(:,comps));
+            max_y = max_all(coeff(:,comps));
+
+            for i = 1:N
+                subplot(N, 1, i);
+                plot(coeff(:,comps(i)));
+                ylim([min_y, max_y]);
+                title(sprintf('Variance explained: %d ', latent(i)));
+            end
+
+        end
+
+        function v = get.Velocity(obj)
+
+            ts = obj.RawData{'velocity_x','TimeSeries'};
+            ts = obj.crop_timeseries(ts);
+
+            v = obj.filter_timeseries(ts);
+
+        end
+
+        function omega = get.Omega(obj)
+
+            ts = obj.RawData{'omega_y','TimeSeries'};
+            ts = obj.crop_timeseries(ts);
+
+            omega = obj.filter_timeseries(ts);
+
+        end
+
+        function temperature = get.Temperature(obj)
+
+            ts = obj.RawData{'T','TimeSeries'};
+            ts = obj.crop_timeseries(ts);
+
+            temperature = ts.Data;
+
+        end
+
+        function ts = crop_timeseries(obj, ts)
+            % ts = CROP_TIMESERIES(obj, ts)
+            %
+            %   Takes a timeseries and removes times according the the time
+            %   index whitelists and blacklists.
+
+            all_times = 1:ts.Length;
+
+            time_indices = merge_black_white(all_times, ...
+                obj.TimeBlacklist, obj.TimeWhitelist);
+
+            bad_times = setdiff(all_times, time_indices);
+
+            ts = delsample(ts, 'Index', bad_times);
+
+        end
+
+        function y = filter_timeseries(obj, ts)
+            % y = FILTER_TIMESERIES(obj, ts)
+            %
+            %   Takes a timeseries and applies the object's output filter
+            %   to generate a vector that can be used for ploting.
+
+            x = interp_nans(ts.Data, 'linear');
+            y = filter(obj.OutputFilter, 1, x);
+
+        end
+
+
+    end
+
+    methods (Static)
+
+        function obj = from_data_file(animal)
+            % obj = DataAnalyzer.FROM_DATA_FILE(animal)
+            %
+            %   Returns an analysis object by loading the most recent data
+            %   for a given animal.
+
+            tabulated_data = get_recent_data(animal);
+            obj = DataAnalyzer(tabulated_data);
+
+        end
+
+    end
+
+    methods (Static, Access=protected)
+
+        function signal = signal_from_channels(green, red)
+            % signal = DataAnalyzer.signal_from_channels(green, red)
+            %
+            %   Returns a vector of data obtained by subtracting the red
+            %   signal from the green via linear regression.
+
+            a = polyfit(red, green, 1);
+
+            signal = green - (a(1)*red + a(2));
+            signal = green;
+
+        end
+
+    end
+
+end
+##### SOURCE END #####
+--></body></html>

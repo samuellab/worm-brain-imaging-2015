@@ -1,0 +1,446 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Andor Ixon Camera</title><meta name="generator" content="MATLAB 8.2"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2014-04-12"><meta name="DC.source" content="AndorIxon.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, tt, code { font-size:12px; }
+pre { margin:0px 0px 20px; }
+pre.error { color:red; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Andor Ixon Camera</h1><p>This provides a limited interface to Andor EMCCD cameras.  It mostly wraps the downloadable SDK provided by Andor to provide a leaner and cleaner interface to which we can attach callbacks.</p><pre class="codeinput"><span class="keyword">classdef</span> (ConstructOnLoad = true) AndorIxon &lt; hgsetget
+
+    <span class="keyword">properties</span>
+        Binning = 1;
+        ExposureTime;
+        EMCCDGain;
+        Cooler;
+        AcquisitionMode;
+        KineticCycleTime;
+        TriggerMode;
+        Shutter;
+        OverlapMode;
+    <span class="keyword">end</span>
+
+    <span class="keyword">properties</span> (SetAccess = private)
+        XPixels;
+        YPixels;
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span>
+        <span class="keyword">function</span> obj = AndorIxon(varargin)
+
+            <span class="keyword">if</span> nargin &gt; 0
+                <span class="keyword">if</span> strcmp(varargin{1},<span class="string">'null'</span>)
+                    <span class="keyword">return</span>;
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+
+            disp(<span class="string">'Initialising Camera'</span>);
+            ret = AndorInitialize(<span class="string">''</span>);
+            CheckError(ret);
+
+            disp(<span class="string">'Turning on cooler'</span>);
+            obj.Cooler = <span class="string">'On'</span>;
+
+            [ret,XPixels, YPixels]=GetDetector;
+            obj.XPixels = XPixels;
+            obj.YPixels = YPixels;
+
+            ret = SetReadMode(4); <span class="comment">% read mode 4 -&gt; Image</span>
+            CheckWarning(ret);
+
+            obj.AcquisitionMode = <span class="string">'RunTillAbort'</span>;
+
+            obj.EMCCDGain = 300;
+
+            obj.ExposureTime = 1/30;
+
+            obj.Binning = 1;
+
+            obj.OverlapMode = 1; <span class="comment">% pipeline frame acquisition</span>
+
+            obj.TriggerMode = <span class="string">'software'</span>;
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.Binning(obj, val)
+            ret = SetImage(val, val, 1, obj.XPixels, 1, obj.YPixels);
+            CheckWarning(ret);
+
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.ExposureTime = obj.ExposureTime * obj.Binning / val;
+                obj.Binning = val;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.ExposureTime(obj,val)
+            ret = SetExposureTime(val);
+            CheckWarning(ret);
+
+            [ret, exposure, accumulate, kinetic] = GetAcquisitionTimings();
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.ExposureTime = exposure;
+                obj.KineticCycleTime = kinetic;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.EMCCDGain(obj, val)
+            ret = SetEMCCDGain(val);
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.EMCCDGain = val;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.Cooler(obj, val)
+            <span class="keyword">switch</span> lower(val)
+                <span class="keyword">case</span> {<span class="string">'on'</span>, true}
+                    ret = CoolerON;
+                    CheckWarning(ret);
+                    <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                        obj.Cooler = true;
+                    <span class="keyword">end</span>
+                <span class="keyword">case</span> {<span class="string">'off'</span>, false}
+                    ret = CoolerOFF;
+                    CheckWarning(ret);
+                    <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                        obj.Cooler = false;
+                    <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.AcquisitionMode(obj,val)
+            <span class="keyword">switch</span> val
+                <span class="keyword">case</span> <span class="string">'SingleScan'</span>
+                    mode = 1;
+                <span class="keyword">case</span> <span class="string">'Accumulate'</span>
+                    mode = 2;
+                <span class="keyword">case</span> <span class="string">'KineticSeries'</span> <span class="comment">% use for z/c stacks</span>
+                    mode = 3;
+                <span class="keyword">case</span> <span class="string">'RunTillAbort'</span>
+                    mode = 5;
+                <span class="keyword">otherwise</span>
+                    error([val <span class="string">' is not a valid acquisition mode'</span>]);
+            <span class="keyword">end</span>
+            ret = SetAcquisitionMode(mode);
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.AcquisitionMode = val;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.KineticCycleTime(obj, val)
+            ret = SetKineticCycleTime(val);
+            CheckWarning(ret);
+
+            [ret, exposure, accumulate, kinetic] = GetAcquisitionTimings();
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.KineticCycleTime = kinetic;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.TriggerMode(obj, val)
+            val = lower(val);
+            <span class="keyword">switch</span> val
+                <span class="keyword">case</span> {<span class="string">'internal'</span>, 0}
+                    mode = 0;
+                <span class="keyword">case</span> {<span class="string">'software'</span>, 10}
+                    mode = 10;
+                <span class="keyword">otherwise</span>
+                    mode = val;
+            <span class="keyword">end</span>
+            ret = SetTriggerMode(mode);
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.TriggerMode = val;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.Shutter(obj, val)
+            val = lower(val);
+            <span class="keyword">switch</span> val
+                <span class="keyword">case</span> {<span class="string">'open'</span>, true}
+                    mode = 1;
+                <span class="keyword">case</span> {<span class="string">'closed'</span>, false}
+                    mode = 2;
+            <span class="keyword">end</span>
+            ret = SetShutter(1, mode, 0, 0);
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.Shutter = mode;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> obj = set.OverlapMode(obj, val)
+            ret = SetOverlapMode(val);
+            CheckWarning(ret);
+            <span class="keyword">if</span> ret == atmcd.DRV_SUCCESS
+                obj.OverlapMode = val;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% destructor</span>
+        <span class="keyword">function</span> delete(obj)
+            ret = AndorShutDown;
+            CheckWarning(ret);
+        <span class="keyword">end</span>
+
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">Error using CheckError (line 15)
+atmcd SDK returned Error: DRV_VXDNOTINSTALLED [20003]
+
+Error in AndorIxon (line 37)
+            CheckError(ret);
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2013b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Andor Ixon Camera
+%
+% This provides a limited interface to Andor EMCCD cameras.  It mostly
+% wraps the downloadable SDK provided by Andor to provide a leaner and
+% cleaner interface to which we can attach callbacks.
+
+classdef (ConstructOnLoad = true) AndorIxon < hgsetget
+    
+    properties 
+        Binning = 1;
+        ExposureTime;
+        EMCCDGain;
+        Cooler;
+        AcquisitionMode;
+        KineticCycleTime;
+        TriggerMode;
+        Shutter;
+        OverlapMode;
+    end
+    
+    properties (SetAccess = private)
+        XPixels;
+        YPixels;
+    end
+    
+    methods
+        function obj = AndorIxon(varargin)
+            
+            if nargin > 0
+                if strcmp(varargin{1},'null')
+                    return;
+                end
+            end
+            
+            disp('Initialising Camera');
+            ret = AndorInitialize('');
+            CheckError(ret);
+
+            disp('Turning on cooler');
+            obj.Cooler = 'On';
+            
+            [ret,XPixels, YPixels]=GetDetector;  
+            obj.XPixels = XPixels;
+            obj.YPixels = YPixels;
+            
+            ret = SetReadMode(4); % read mode 4 -> Image
+            CheckWarning(ret);
+
+            obj.AcquisitionMode = 'RunTillAbort';
+
+            obj.EMCCDGain = 300;
+            
+            obj.ExposureTime = 1/30;
+            
+            obj.Binning = 1;
+            
+            obj.OverlapMode = 1; % pipeline frame acquisition
+            
+            obj.TriggerMode = 'software';
+            
+        end
+        
+        function obj = set.Binning(obj, val)
+            ret = SetImage(val, val, 1, obj.XPixels, 1, obj.YPixels);
+            CheckWarning(ret);
+            
+            if ret == atmcd.DRV_SUCCESS
+                obj.ExposureTime = obj.ExposureTime * obj.Binning / val;
+                obj.Binning = val;
+            end
+        end
+        
+        function obj = set.ExposureTime(obj,val)
+            ret = SetExposureTime(val);
+            CheckWarning(ret);
+            
+            [ret, exposure, accumulate, kinetic] = GetAcquisitionTimings();
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.ExposureTime = exposure;
+                obj.KineticCycleTime = kinetic;
+            end
+        end
+                
+        function obj = set.EMCCDGain(obj, val)
+            ret = SetEMCCDGain(val);
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.EMCCDGain = val;
+            end
+        end
+        
+        function obj = set.Cooler(obj, val)
+            switch lower(val)
+                case {'on', true}
+                    ret = CoolerON;
+                    CheckWarning(ret);
+                    if ret == atmcd.DRV_SUCCESS
+                        obj.Cooler = true;
+                    end
+                case {'off', false}
+                    ret = CoolerOFF;
+                    CheckWarning(ret);
+                    if ret == atmcd.DRV_SUCCESS
+                        obj.Cooler = false;
+                    end
+            end
+        end
+        
+        function obj = set.AcquisitionMode(obj,val)
+            switch val
+                case 'SingleScan'
+                    mode = 1;
+                case 'Accumulate'
+                    mode = 2;
+                case 'KineticSeries' % use for z/c stacks
+                    mode = 3;
+                case 'RunTillAbort'
+                    mode = 5;
+                otherwise
+                    error([val ' is not a valid acquisition mode']);
+            end
+            ret = SetAcquisitionMode(mode);
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.AcquisitionMode = val;
+            end
+        end
+        
+        function obj = set.KineticCycleTime(obj, val)
+            ret = SetKineticCycleTime(val);
+            CheckWarning(ret);
+            
+            [ret, exposure, accumulate, kinetic] = GetAcquisitionTimings();
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.KineticCycleTime = kinetic;
+            end
+        end
+        
+        function obj = set.TriggerMode(obj, val)
+            val = lower(val);
+            switch val
+                case {'internal', 0}
+                    mode = 0;
+                case {'software', 10}
+                    mode = 10;
+                otherwise
+                    mode = val;
+            end
+            ret = SetTriggerMode(mode);
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.TriggerMode = val;
+            end
+        end
+        
+        function obj = set.Shutter(obj, val)
+            val = lower(val);
+            switch val
+                case {'open', true}
+                    mode = 1;
+                case {'closed', false}
+                    mode = 2;
+            end
+            ret = SetShutter(1, mode, 0, 0);
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.Shutter = mode;
+            end
+        end
+        
+        function obj = set.OverlapMode(obj, val)
+            ret = SetOverlapMode(val);
+            CheckWarning(ret);
+            if ret == atmcd.DRV_SUCCESS
+                obj.OverlapMode = val;
+            end
+        end
+        
+        % destructor
+        function delete(obj)
+            ret = AndorShutDown;
+            CheckWarning(ret);
+        end
+        
+    end
+end
+##### SOURCE END #####
+--></body></html>
